@@ -25,13 +25,27 @@
 
   <main>
     <section id="vocab-section" class="tab-section">
-      <h2>오늘의 단어</h2>
+      <div class="section-head">
+        <h2>오늘의 단어</h2>
+        <div class="round-nav">
+          <button id="vocab-prev" class="nav-btn">◀ 이전 회차</button>
+          <span id="vocab-round-label" class="round-label"></span>
+          <button id="vocab-next" class="nav-btn">다음 회차 ▶</button>
+        </div>
+      </div>
       <p id="vocab-progress" class="progress-text"></p>
       <div id="vocab-list" class="card-list"></div>
     </section>
 
     <section id="speaking-section" class="tab-section" style="display:none;">
-      <h2>오늘의 말하기 문장</h2>
+      <div class="section-head">
+        <h2>오늘의 말하기 문장</h2>
+        <div class="round-nav">
+          <button id="speak-prev" class="nav-btn">◀ 이전 회차</button>
+          <span id="speak-round-label" class="round-label"></span>
+          <button id="speak-next" class="nav-btn">다음 회차 ▶</button>
+        </div>
+      </div>
       <div id="speaking-card" class="speaking-card"></div>
     </section>
   </main>
