@@ -4,6 +4,8 @@ let currentTab = 'vocab';
 let recognition = null;
 let isRecording = false;
 
+const VOCAB_PER_ROUND = 5;
+
 // ---------- 초기화 ----------
 document.addEventListener('DOMContentLoaded', () => {
   updateStreak();
@@ -33,6 +35,11 @@ function bindEvents(){
       document.getElementById('speaking-section').style.display = currentTab==='speaking' ? 'block':'none';
     });
   });
+
+  document.getElementById('vocab-prev').addEventListener('click', ()=> changeRound('vocab', -1));
+  document.getElementById('vocab-next').addEventListener('click', ()=> changeRound('vocab', 1));
+  document.getElementById('speak-prev').addEventListener('click', ()=> changeRound('speak', -1));
+  document.getElementById('speak-next').addEventListener('click', ()=> changeRound('speak', 1));
 }
 
 function setActiveLevelButton(){
@@ -50,9 +57,7 @@ function setActiveTabButton(){
 function getTodayString(){
   return new Date().toISOString().slice(0,10);
 }
-function getDayIndex(){
-  return Math.floor(Date.now()/86400000);
-}
+
 function updateStreak(){
   const today = getTodayString();
   const last = localStorage.getItem('lastVisit');
@@ -73,24 +78,71 @@ function updateStreak(){
   document.getElementById('streak-info').textContent = `🔥 연속 학습 ${streak}일째`;
 }
 
-// ---------- 오늘의 단어 ----------
-function getTodayVocab(){
-  const list = vocabData[currentLevel];
-  const perDay = 5;
-  const totalGroups = Math.ceil(list.length/perDay);
-  const groupIndex = getDayIndex() % totalGroups;
-  const start = groupIndex*perDay;
-  return list.slice(start, start+perDay);
+// ---------- 회차(라운드) 관리 ----------
+// kind: 'vocab' 또는 'speak'
+function getTotalGroups(kind, level){
+  if(kind === 'vocab'){
+    return Math.ceil(vocabData[level].length / VOCAB_PER_ROUND);
+  } else {
+    return speakingData[level].length;
+  }
 }
 
-function getLearnedKey(){
-  return `learned_${currentLevel}_${getDayIndex()}`;
+function getRoundKey(kind, level){ return `${kind}Round_${level}`; }
+function getDateKey(kind, level){ return `${kind}LastDate_${level}`; }
+
+// 하루가 지나면 자동으로 다음 회차로 넘어가고, 그 회차 번호를 반환한다.
+function ensureDailyAdvance(kind, level){
+  const total = getTotalGroups(kind, level);
+  const dateKey = getDateKey(kind, level);
+  const roundKey = getRoundKey(kind, level);
+  const today = getTodayString();
+  const lastDate = localStorage.getItem(dateKey);
+  let round = parseInt(localStorage.getItem(roundKey) || '0', 10);
+  if(isNaN(round) || round < 0) round = 0;
+  round = round % total;
+
+  if(lastDate === null){
+    // 이 레벨을 처음 이용하는 경우: 0회차부터 시작
+    localStorage.setItem(dateKey, today);
+    localStorage.setItem(roundKey, round.toString());
+  } else if(lastDate !== today){
+    // 날짜가 바뀌었으면 다음 회차로 자동 이동
+    round = (round + 1) % total;
+    localStorage.setItem(dateKey, today);
+    localStorage.setItem(roundKey, round.toString());
+  }
+  return round;
+}
+
+// 이전/다음 회차 버튼을 눌렀을 때 호출
+function changeRound(kind, direction){
+  const level = currentLevel;
+  const total = getTotalGroups(kind, level);
+  let round = parseInt(localStorage.getItem(getRoundKey(kind, level)) || '0', 10);
+  round = ((round + direction) % total + total) % total;
+  localStorage.setItem(getRoundKey(kind, level), round.toString());
+
+  if(kind === 'vocab') renderVocab();
+  else renderSpeaking();
+}
+
+// ---------- 오늘의 단어 ----------
+function getVocabForRound(level, round){
+  const list = vocabData[level];
+  const start = round * VOCAB_PER_ROUND;
+  return list.slice(start, start + VOCAB_PER_ROUND);
 }
 
 function renderVocab(){
-  const todayWords = getTodayVocab();
-  const learnedKey = getLearnedKey();
-  const learned = JSON.parse(localStorage.getItem(learnedKey)||'[]');
+  const level = currentLevel;
+  const round = ensureDailyAdvance('vocab', level);
+  const total = getTotalGroups('vocab', level);
+  const todayWords = getVocabForRound(level, round);
+  const learnedKey = `learned_vocab_${level}_${round}`;
+  const learned = JSON.parse(localStorage.getItem(learnedKey) || '[]');
+
+  document.getElementById('vocab-round-label').textContent = `${round + 1} / ${total} 회차`;
 
   const container = document.getElementById('vocab-list');
   container.innerHTML = '';
@@ -133,29 +185,33 @@ function renderVocab(){
         e.target.textContent = '학습완료 ✔';
       }
       localStorage.setItem(learnedKey, JSON.stringify(arr));
-      updateVocabProgress();
+      updateVocabProgress(level, round, todayWords);
     });
   });
 
-  updateVocabProgress();
+  updateVocabProgress(level, round, todayWords);
 }
 
-function updateVocabProgress(){
-  const todayWords = getTodayVocab();
-  const learned = JSON.parse(localStorage.getItem(getLearnedKey())||'[]');
+function updateVocabProgress(level, round, todayWords){
+  const learnedKey = `learned_vocab_${level}_${round}`;
+  const learned = JSON.parse(localStorage.getItem(learnedKey)||'[]');
   document.getElementById('vocab-progress').textContent =
-    `오늘의 단어 ${learned.length} / ${todayWords.length} 학습 완료`;
+    `이번 회차 단어 ${learned.length} / ${todayWords.length} 학습 완료`;
 }
 
 // ---------- 오늘의 말하기 문장 ----------
-function getTodaySentence(){
-  const list = speakingData[currentLevel];
-  const index = getDayIndex() % list.length;
-  return list[index];
+function getSpeakingForRound(level, round){
+  return speakingData[level][round];
 }
 
 function renderSpeaking(){
-  const item = getTodaySentence();
+  const level = currentLevel;
+  const round = ensureDailyAdvance('speak', level);
+  const total = getTotalGroups('speak', level);
+  const item = getSpeakingForRound(level, round);
+
+  document.getElementById('speak-round-label').textContent = `${round + 1} / ${total} 회차`;
+
   const container = document.getElementById('speaking-card');
   container.innerHTML = `
     <div class="speaking-sentence">${item.sentence}</div>
