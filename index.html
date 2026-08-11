@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>매일 영어 스피킹</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="app-header">
+    <h1>🗣️ 매일 영어 스피킹</h1>
+    <p id="streak-info" class="streak-info"></p>
+  </header>
+
+  <nav class="level-nav">
+    <button class="level-btn" data-level="beginner">초급</button>
+    <button class="level-btn" data-level="intermediate">중급</button>
+    <button class="level-btn" data-level="advanced">고급</button>
+  </nav>
+
+  <nav class="tab-nav">
+    <button class="tab-btn" data-tab="vocab">📚 오늘의 단어</button>
+    <button class="tab-btn" data-tab="speaking">🎤 말하기 연습</button>
+  </nav>
+
+  <main>
+    <section id="vocab-section" class="tab-section">
+      <h2>오늘의 단어</h2>
+      <p id="vocab-progress" class="progress-text"></p>
+      <div id="vocab-list" class="card-list"></div>
+    </section>
+
+    <section id="speaking-section" class="tab-section" style="display:none;">
+      <h2>오늘의 말하기 문장</h2>
+      <div id="speaking-card" class="speaking-card"></div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Made with ❤️ for English learners</p>
+  </footer>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
